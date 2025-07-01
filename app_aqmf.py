@@ -5,6 +5,10 @@ Created on Tue Jul  1 11:28:16 2025
 @author: felima
 """
 
+# -*- coding: utf-8 -*-
+"""
+Analyse AQMF - Version finale corrigée
+"""
 
 import streamlit as st
 import numpy as np
@@ -24,18 +28,27 @@ import os
 st.set_page_config(page_title="Analyse AQMF", layout="wide")
 st.title("Analyse AQMF - Rapport Mouvement Facial")
 
-# Fonction pour générer les faciogrammes
-def generate_faciogram(mean_hr, mean_px, category):
+# Fonction modifiée pour générer les faciogrammes
+def generate_faciogram(mean_hr, mean_px, category, tmpdir_path):
     try:
-        fig = visualization.faciograph_px(mean_hr, mean_px, show=False)
+        # Génération du faciogramme sans le paramètre show
+        fig = plt.figure(figsize=(8, 6))
+        visualization.faciograph_px(mean_hr, mean_px, save=False)
+        
+        # Sauvegarde en mémoire
         buf = io.BytesIO()
         fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
         buf.seek(0)
+        
+        # Sauvegarde supplémentaire en JPG
+        jpg_path = tmpdir_path / f"{category}.jpg"
+        Image.open(buf).save(jpg_path, "JPEG")
+        
         plt.close(fig)
-        return buf
+        return buf, jpg_path
     except Exception as e:
         st.error(f"Erreur génération faciogramme {category}: {str(e)}")
-        return None
+        return None, None
 
 # Charger la référence
 try:
@@ -124,19 +137,13 @@ if uploaded_files and nom and prenom:
                 results['anomalies']['cats'].append(cat)
                 
                 # Génération du faciogramme
-                facio_buf = generate_faciogram(mean_hr, mean_px, cat)
-                if facio_buf:
-                    results['faciogrammes'][cat] = facio_buf
+                facio_buf, facio_jpg = generate_faciogram(mean_hr, mean_px, cat, tmpdir_path)
+                if facio_buf and facio_jpg:
+                    results['faciogrammes'][cat] = {'buf': facio_buf, 'jpg': facio_jpg}
                     
                     # Affichage dans Streamlit
-                    with st.expander(f"Faciograph {cat}"):
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.image(facio_buf, caption="Format standard")
-                        with col2:
-                            jpg_path = tmpdir_path / f"{cat}.jpg"
-                            Image.open(facio_buf).save(jpg_path, "JPEG")
-                            st.image(str(jpg_path), caption="Format JPG")
+                    with st.expander(f"Faciogramme {cat}"):
+                        st.image(facio_jpg, caption=f"Faciogramme {cat}")
                 
             except Exception as e:
                 st.error(f"Erreur avec {cat}: {str(e)}")
@@ -189,20 +196,15 @@ if uploaded_files and nom and prenom:
             # Faciogrammes
             pdf.add_page()
             pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, "Faciographs", ln=True)
+            pdf.cell(0, 10, "Faciogrammes", ln=True)
             
-            for i, (cat, buf) in enumerate(results['faciographs'].items()):
+            for i, (cat, data) in enumerate(results['faciogrammes'].items()):
                 if i % 2 == 0:
                     pdf.ln(5)
                 
-                # Sauvegarde temporaire en JPG pour le PDF
-                img_path = tmpdir_path / f"{cat}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(buf.getvalue())
-                
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, f"Mouvement {cat}", ln=True)
-                pdf.image(str(img_path), x=10 + (i % 2) * 100, w=90)
+                pdf.image(str(data['jpg']), x=10 + (i % 2) * 100, w=90)
             
             # Sauvegarde finale
             pdf_path = tmpdir_path / "rapport_final.pdf"
