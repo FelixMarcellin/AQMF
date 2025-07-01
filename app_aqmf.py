@@ -7,7 +7,7 @@ Created on Tue Jul  1 11:28:16 2025
 
 # -*- coding: utf-8 -*-
 """
-Analyse AQMF - Version finale avec corrections d'affichage
+Analyse AQMF - Version finale avec toutes les corrections
 """
 
 import streamlit as st
@@ -29,15 +29,15 @@ st.set_page_config(page_title="Analyse AQMF", layout="wide")
 st.title("Analyse AQMF - Rapport Mouvement Facial")
 
 def generate_faciogram(mean_hr, mean_px, category, tmpdir_path):
-    """Génère un faciogramme et le sauvegarde en PNG"""
+    """Génère un faciogramme correctement formaté"""
     try:
-        # Création d'une figure avec fond blanc
-        fig = plt.figure(figsize=(10, 8), facecolor='white')
+        # Création de la figure avec fond blanc
+        fig, ax = plt.subplots(figsize=(10, 8), facecolor='white')
         
-        # Appel à la fonction de visualisation originale
+        # Appel à la fonction de visualisation
         visualization.faciograph_px(mean_hr, mean_px)
         
-        # Conversion en image PNG
+        # Sauvegarde en mémoire
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
         buf.seek(0)
@@ -47,7 +47,7 @@ def generate_faciogram(mean_hr, mean_px, category, tmpdir_path):
         with open(img_path, "wb") as f:
             f.write(buf.getbuffer())
             
-        plt.close()
+        plt.close(fig)
         return buf, img_path
     except Exception as e:
         st.error(f"Erreur génération faciogramme {category}: {str(e)}")
@@ -134,9 +134,9 @@ if uploaded_files and nom and prenom:
                 if facio_buf:
                     results['faciogrammes'][cat] = {'buf': facio_buf, 'path': facio_path}
                     
-                    # Affichage dans Streamlit
+                    # Affichage dans Streamlit avec use_container_width
                     with st.expander(f"Faciogramme {cat}"):
-                        st.image(facio_path, use_column_width=True)
+                        st.image(facio_path, use_container_width=True)
                 
             except Exception as e:
                 st.error(f"Erreur {cat}: {str(e)}")
