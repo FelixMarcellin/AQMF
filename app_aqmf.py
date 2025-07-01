@@ -4,6 +4,12 @@ Created on Tue Jul  1 11:28:16 2025
 
 @author: felima
 """
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jul  1 11:28:16 2025
+
+@author: felima
+"""
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -110,9 +116,9 @@ if uploaded_files and nom and prenom:
 
         pdf.image(str(temp_img_path), w=180)
 
-        # Export PDF en mémoire
+        # Export PDF en mémoire - FIXED: Using proper method for in-memory PDF
         pdf_output = io.BytesIO()
-        pdf.output(pdf_output)
+        pdf_output.write(pdf.output(dest='S').encode('latin-1'))  # Using 'S' for string output
         pdf_output.seek(0)
 
         # Bouton de téléchargement
