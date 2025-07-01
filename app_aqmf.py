@@ -7,7 +7,7 @@ Created on Tue Jul  1 11:28:16 2025
 
 # -*- coding: utf-8 -*-
 """
-Analyse AQMF - Version finale corrigée
+Analyse AQMF - Version finale avec gestion PNG
 """
 
 import streamlit as st
@@ -28,24 +28,27 @@ import os
 st.set_page_config(page_title="Analyse AQMF", layout="wide")
 st.title("Analyse AQMF - Rapport Mouvement Facial")
 
-# Fonction modifiée pour générer les faciogrammes
+# Fonction pour générer les faciogrammes
 def generate_faciogram(mean_hr, mean_px, category, tmpdir_path):
     try:
-        # Génération du faciogramme sans le paramètre show
+        # Création de la figure
         fig = plt.figure(figsize=(8, 6))
+        
+        # Appel à la fonction faciograph_px sans le paramètre show
         visualization.faciograph_px(mean_hr, mean_px, save=False)
         
-        # Sauvegarde en mémoire
+        # Sauvegarde en mémoire (PNG)
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+        fig.savefig(buf, format='png', dpi=300, bbox_inches='tight', facecolor='white')
         buf.seek(0)
         
-        # Sauvegarde supplémentaire en JPG
-        jpg_path = tmpdir_path / f"{category}.jpg"
-        Image.open(buf).save(jpg_path, "JPEG")
+        # Sauvegarde dans le dossier temporaire
+        png_path = tmpdir_path / f"{category}.png"
+        with open(png_path, "wb") as f:
+            f.write(buf.getbuffer())
         
         plt.close(fig)
-        return buf, jpg_path
+        return buf, png_path
     except Exception as e:
         st.error(f"Erreur génération faciogramme {category}: {str(e)}")
         return None, None
@@ -137,13 +140,13 @@ if uploaded_files and nom and prenom:
                 results['anomalies']['cats'].append(cat)
                 
                 # Génération du faciogramme
-                facio_buf, facio_jpg = generate_faciogram(mean_hr, mean_px, cat, tmpdir_path)
-                if facio_buf and facio_jpg:
-                    results['faciogrammes'][cat] = {'buf': facio_buf, 'jpg': facio_jpg}
+                facio_buf, facio_png = generate_faciogram(mean_hr, mean_px, cat, tmpdir_path)
+                if facio_buf and facio_png:
+                    results['faciogrammes'][cat] = {'buf': facio_buf, 'png': facio_png}
                     
                     # Affichage dans Streamlit
                     with st.expander(f"Faciogramme {cat}"):
-                        st.image(facio_jpg, caption=f"Faciogramme {cat}")
+                        st.image(facio_png, caption=f"Faciogramme {cat}")
                 
             except Exception as e:
                 st.error(f"Erreur avec {cat}: {str(e)}")
@@ -167,7 +170,7 @@ if uploaded_files and nom and prenom:
             ax.legend()
             st.pyplot(fig_anom)
             results['fig_anomalies'] = io.BytesIO()
-            fig_anom.savefig(results['fig_anomalies'], format='png', bbox_inches='tight')
+            fig_anom.savefig(results['fig_anomalies'], format='png', bbox_inches='tight', facecolor='white')
             plt.close(fig_anom)
         
         # Génération du PDF
@@ -204,7 +207,7 @@ if uploaded_files and nom and prenom:
                 
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, f"Mouvement {cat}", ln=True)
-                pdf.image(str(data['jpg']), x=10 + (i % 2) * 100, w=90)
+                pdf.image(str(data['png']), x=10 + (i % 2) * 100, w=90)
             
             # Sauvegarde finale
             pdf_path = tmpdir_path / "rapport_final.pdf"
