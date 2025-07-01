@@ -199,8 +199,10 @@ def faciograph_px(hr_np, px_np, save=True, image_name = "faciograph.svg"):#, ano
     lines, labels = plt.thetagrids(np.degrees(label_loc), fontsize=20,labels=labels)
     plt.show()
     
+    # Remplacez la fin par:
     if save:
-        fig.savefig(image_name)
-        print(image_name + " saved")
-    
+        plt.savefig(image_name, bbox_inches='tight', facecolor='white')
+        plt.close()
+    else:
+        plt.show()
     return
